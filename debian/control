@@ -1,0 +1,36 @@
+Source: albumtool
+Section: sound
+Priority: optional
+Maintainer: Ryan Marquardt (orbnauticus) <ryan.marquardt@gmail.com>
+Build-Depends: cdbs (>= 0.4.62), debhelper (>= 7.4), python (>=2.6), python-support
+XS-Python-Version: >= 2.4
+Vcs-Git: git://github.com/orbnauticus/AlbumTool.git
+Vcs-Browser: git://github.com/orbnauticus/AlbumTool
+Standards-Version: 3.8.4
+Homepage: git://github.com/orbnauticus/AlbumTool
+
+Package: python-albumtool
+Architecture: i386 amd64
+Pre-Depends: dpkg (>= 1.14.12ubuntu3)
+Depends: ${misc:Depends}, ${python:Depends}
+Recommends: cdparanoia, gstreamer0.10-tools, python-gst0.10
+Homepage: http://github.com/orbnauticus/AlbumTool
+Description: Audio CD archiving tool
+ AlbumTool is a python library and scripts for archiving audio CDs.
+ The library centers around creating 'album' files which are tar archives
+ containing lossless audio and cuesheet information.
+ .
+ This package contains the python library
+
+Package: albumtool
+Architecture: i386 amd64
+Pre-Depends: dpkg (>= 1.14.12ubuntu3)
+Depends: ${misc:Depends}, ${python:Depends}, python-albumtool
+Recommends: cdparanoia, gstreamer0.10-tools, python-gst0.10
+Homepage: http://github.com/orbnauticus/AlbumTool
+Description: Audio CD archiving tool
+ AlbumTool is a python library and scripts for archiving audio CDs.
+ The library centers around creating 'album' files which are tar archives
+ containing lossless audio and cuesheet information.
+ .
+ This package contains the command-line scripts

@@ -1,0 +1,275 @@
+#!/usr/bin/env python
+
+from albumtool import *
+
+#from itertools import tee, izip
+#import optparse
+#import os
+#from subprocess import Popen,PIPE
+#import sys
+#import StringIO
+#import wave
+
+#import CDDB
+
+#SECTORS_PER_SECOND = 75
+#SECTORS_PER_MINUTE = SECTORS_PER_SECOND * 60
+
+#def pairwise(i):
+	#a,b = tee(i)
+	#next(b,None)
+	#return izip(a,b)
+
+#class GstPipeProc(object):
+	#def __init__(self, pipe_rep):
+		#self.pipe_rep = pipe_rep
+
+	#def run(self, metadata):
+		#cmd = ['gst-launch-0.10', '-t',
+		#'fdsrc', '!',
+		#'taginject', 'tags=artist=\"{artist}\",album=\"{album}\",date=\"{date}\",track-number=\"{track}\",title=\"{title}\",genre=\"{genre}\"', '!',
+		#'decodebin', '!',
+		#'audioconvert', '!',
+		#'{0}'.format( self.pipe_rep, **metadata ), '!',
+		#'filesink location="{file}"'.format(self.pipe_rep, **metadata)]
+		#print cmd
+		#self.proc = Popen(cmd, stdin=PIPE, preexec_fn=bumpnice)
+		#return self.proc, self.proc.stdin
+
+#GstPipe = GstPipeProc
+
+#class WaveSplitter(object):
+	#def __init__(self, src=sys.stdin):
+		#self.src = wave.open(src)
+		#self.params = self.src.getparams()
+		#self.progress = 0
+
+	#nchannels = property(lambda x:x.params[0])
+	#sampwidth = property(lambda x:x.params[1])
+	#framerate = property(lambda x:x.params[2])
+	#nframes = property(lambda x:x.params[3])
+
+	#def write_sectors(self, path, sectors):
+		#frames = sectors * self.framerate / SECTORS_PER_SECOND
+		#s = StringIO.StringIO()
+		#if hasattr(path, 'write'):
+			#dest = path
+		#else:
+			#dest = open(path, 'wb')
+		#buff = wave.open(s,'wb')
+		#buff.setparams(self.params)
+		#buff.setnframes(frames)
+		#buff.writeframesraw(self._read(frames))
+		#dest.write(s.getvalue())
+		#dest.close()
+
+	#def _read(self, frames):
+		#self.progress += frames
+		#return self.src.readframes(frames)
+
+#def timestamp2sectors(t):
+	#m,s,f = map(int,t.replace(':','.').split('.'))
+	#return m * SECTORS_PER_MINUTE + s * SECTORS_PER_SECOND + f
+
+#class CueFile(object):
+	#def __init__(self, fobj):
+		#self.File = None
+		#self.Tracks = [{'remarks':[]}]
+		#for line in fobj:
+			#directive,args = line.split(None,1)
+			#args = args.strip()
+			#if directive == 'FILE':				self.File = args[1:-6]
+			#elif directive == 'INDEX':			self.Tracks[-1]['index'] = args.split()[1]
+			#elif directive == 'PERFORMER':		self.Tracks[-1]['performer'] = args.strip('"')
+			#elif directive == 'TITLE':			self.Tracks[-1]['title'] = args.strip('"')
+			#elif directive == 'REM':
+				#word,rest = args.split(None,1)
+				#if word == 'GENRE':				self.Tracks[-1]['genre'] = rest
+				#elif word == 'DATE':			self.Tracks[-1]['date'] = rest
+				#else:							self.Tracks[-1]['remarks'].append(line[3:])
+			#elif directive == 'TRACK':
+				#idx,typ = args.split()
+				#if int(idx) != len(self.Tracks) or typ != 'AUDIO':
+					#raise IOError('Malformed cue file. Expected "TRACK %02d AUDIO"' % len(self.Tracks))
+				#self.Tracks.append({'remarks':[]})
+			#else:
+				#print >>sys.stderr, 'Unknown directive:', `directive`, `args`
+		#for t in self.Tracks:
+			#if 'index' in t:
+				#t['firstsector'] = timestamp2sectors(t['index'])
+		#for s,t in pairwise(self.Tracks[1:]):
+			#s['nsectors'] = t['firstsector'] - s['firstsector']
+	#def __iter__(self):
+		#return iter(self.Tracks[1:])
+	#def __str__(self):
+		#return str(self.__dict__)
+	#@property
+	#def ntracks(self):
+		#return len(self.Tracks[1:])
+
+#def wdevnull():
+	#return open(os.devnull,'w')
+
+#def taropen(tarfile,which):
+	#return Popen(['tar', '-xf', tarfile, which, '-O'],stdout=PIPE,stderr=wdevnull())
+
+#def bumpnice():
+	#os.nice(10)
+
+#class Album(object):
+	#def __init__(self, path):
+		#self.path = path
+		#cuetar = taropen(self.path, 'cue')
+		#self.Cue = CueFile(cuetar.stdout)
+		#AudioSrc = taropen(self.path, self.Cue.File)
+		#if self.Cue.File.endswith('.flac'):
+			#self.AudioFile = Popen(['flac','-d','-s','-'],
+			  #stdin=AudioSrc.stdout, stdout=PIPE).stdout
+		#elif self.Cue.File.endswith('.wv'):
+			#self.AudioFile = Popen(['wvunpack','-','-o','-','-q'],
+			  #stdin=AudioSrc.stdout, stdout=PIPE).stdout
+		#elif not self.Cue.File.endswith('.wav'):
+			#self.AudioFile = Popen('gst-launch-0.10 -q fdsrc ! decodebin ! audio/x-raw-int ! wavenc ! fdsink',
+			  #shell=True, stdin=AudioSrc.stdout, stdout=PIPE, bufsize=-1).stdout
+		#else:
+			#self.AudioFile = AudioSrc.stdout
+
+if __name__=='__main__':
+	parser = optparse.OptionParser(
+		usage='usage: %prog [options] FILE',
+	)
+
+	parser.add_option('-c', '--cue', dest='type', action='store_const', const='cue',
+	  help='Input file is a cuefile, not an album file.')
+	parser.add_option('--merge', dest='merge', metavar='TRACKS',
+	  help='TRACKS is a comma-separated list of tracks to be encoded. Use dashes'
+	  ' (-) to merge adjacent tracks. Use asterisks (*) to encode unspecified'
+	  ' tracks separately. For example "1-3,*,7-8" will output tracks 1-3 as one file'
+	  ' 4, 5, and 6 in separate tracks and 7-8 as one. "-" means no splitting.'
+	  ' Defaults to "*"')
+
+	output = optparse.OptionGroup(parser, 'Output Formats')
+	  #'These options control which formats the output files are converted to.')
+	output.add_option('--pipe', dest='pipe', metavar='EXT,CMD',
+	  help='Execute shell command CMD for each track. CMD should accept a wave file on stdin. Files will be output with extension EXT.')
+	output.add_option('--gstpipe', dest='gstpipe', metavar='EXT,PIPE',
+	  help='Pass output files through gstreamer pipeline PIPE. Files will be output with extension EXT.')
+
+	FileFormat = '{track:02} {title}.{ext}'
+
+	OGGCMD = 'ogg,oggenc - -o "{file}" -d "{date}" -N "{track}" -t "{title}" -l "{album}" -a "{artist}" -G "{genre}"'
+	OGGCMD = 'ogg,vorbisenc ! oggmux'
+	MP3CMD = 'mp3,lame ! id3v2mux'
+	FLACCMD = 'flac,flacenc'
+	#GSTCMD = r'gst-launch-0.10 -t fdsrc ! taginject "tags=artist=\"{artist}\",album=\"{album}\",date=\"{date}\",track-number=\"{track}\",title=\"{title}\",genre=\"{genre}\"" ! decodebin ! audioconvert ! %s ! filesink location="{file}"'
+
+	output.add_option('--ogg', dest='gstpipe', action='store_const', const=OGGCMD,
+	  help='Encode tracks to ogg vorbis format. Alias for --gstpipe %r' % OGGCMD)
+	output.add_option('--mp3', dest='gstpipe', action='store_const', const=MP3CMD,
+	  help='Encode tracks to mp3 format. Alias for --gstpipe %r' % MP3CMD)
+	output.add_option('--flac', dest='gstpipe', action='store_const', const=FLACCMD,
+	  help='Encode tracks to flac format. Alias for --gstpipe %r' % FLACCMD)
+	parser.add_option_group(output)
+
+	metadata = optparse.OptionGroup(parser, 'Metadata',
+	  'Override metadata taken from the cue file')
+	metadata.add_option('--album', dest='album')
+	metadata.add_option('--artist', dest='artist')
+	metadata.add_option('--date', dest='date')
+	metadata.add_option('--genre', dest='genre')
+	parser.add_option_group(metadata)
+
+	parser.add_option('-f', '--file', dest='file',
+	  help='Set a format string for output filenames. This is passed as {file} \
+to the output program with other brace arguments replaced. Defaults to %s.' % FileFormat)
+	parser.add_option('-d','--dir', dest='dir',
+	  help='Set a destination directory. This is always prepended to {file}')
+
+	parser.set_defaults(
+		file=FileFormat,
+		dir='.',
+		ext='wav',
+		type='album',
+		merge='*',
+		mergesep=',',
+	)
+
+	options, args = parser.parse_args()
+	print options, args
+
+	if options.gstpipe:
+		options.ext, _, options.gstpipe = options.gstpipe.partition(',')
+	elif options.pipe:
+		options.ext, _, options.pipe = options.pipe.partition(',')
+
+	if not args:
+		options.cue = options.cue or '-'
+	if options.type == 'cue':
+		CUE = CueFile(sys.stdin if options.cue == '-' else open(options.cue))
+		SOURCE = open(CUE.File,'rb')
+	elif options.type == 'album':
+		ALBUM = Album(args[0])
+		CUE = ALBUM.Cue
+		SOURCE = ALBUM.AudioFile
+	#Now there should be two open files, CUE and SOURCE
+
+	w = WaveSplitter(src=SOURCE)
+	gstpipe = GstPipe(options.gstpipe)
+
+	def parse_mergelist(merge, last):
+		ml = [(None,0)]
+		for m in merge.split(','):
+			if m == '*': ml.append(None)
+			else:
+				a,_,b = m.partition('-') if '-' in m else (m,0,m)
+				ml.append((int(a or 0) or None, int(b or 0) or None))
+		ml.append((last+1,None))
+		print ml
+		for j in range(1,len(ml)-1):
+			if ml[j] is None:
+				for i in range(ml[j-1][1]+1,ml[j+1][0]):
+					yield (i,i)
+			elif not (ml[j][0] and ml[j][1]):
+				a = ml[j][0] or (ml[j-1][1]+1)
+				b = ml[j][1] or (ml[j+1][0]-1)
+				yield a,b
+			else:
+				yield ml[j]
+
+	for a,b in parse_mergelist(options.merge, CUE.ntracks):
+		num_sectors = 0
+		Title = []
+		for i in range(a,b+1):
+			T = CUE.Tracks[i]
+			num_sectors += T.get('nsectors',None) or (w.nframes / 588 - T['firstsector'])
+			try:
+				Title.append(T['title'])
+			except KeyError:
+				pass
+		T = CUE.Tracks[a]
+		metadata = {
+			'title':  options.mergesep.join(Title) or 'Unknown',
+			'album':  options.album or CUE.Tracks[0].get('title','Unknown'),
+			'artist': options.artist or CUE.Tracks[0].get('performer','Unknown'),
+			'date':   options.date or CUE.Tracks[0].get('date',1900),
+			'track':  a,
+			'genre':  options.genre or CUE.Tracks[0].get('genre','Unknown'),
+			'ext':    options.ext,
+		}
+		metadata['file'] = os.path.join(options.dir, options.file.format(**metadata))
+		print 'Writing file "{file}": {0} sectors, {1} frames.'.format(num_sectors, num_sectors*588, **metadata)
+		if options.gstpipe:
+			print options.gstpipe
+			proc,dest = gstpipe.run(metadata)
+		elif options.pipe:
+			print options.pipe.format(**metadata)
+			pipe = Popen(options.pipe.format(**metadata), shell=True, preexec_fn=bumpnice, stdin=PIPE)
+			proc,dest = pipe, pipe.stdin
+		else:
+			outfile = metadata['file']
+			proc,dest = None, open(outfile,'wb')
+		w.write_sectors(dest, num_sectors)
+		if proc:
+			proc.wait()
+		print (w.progress / 588), w.progress
+

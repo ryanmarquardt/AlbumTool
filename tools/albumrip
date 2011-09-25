@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+
+from albumtool import CD
+
+import sys
+import optparse
+
+parser = optparse.OptionParser(
+	usage = 'use: %prog [options]',
+	description = 'Rip audio cds to "album" files: tar archives containing a complete audio track and cue sheet.'
+)
+
+parser.add_option('-d', '--disc', action='store', dest='disc',
+	help='Device file to use with cdparanoia (default: %default)')
+parser.add_option('-c', '--cat', action='store', dest='category',
+	help='CDDB category of your disc. If not specified and there is more than one'
+	' category available, a list of possibilities will be printed and the program'
+	' will exit.')
+parser.add_option('-o', '--output', action='store', dest='out', metavar='PATH',
+	help='Write album file to PATH. Segments in curly braces are replaced with metadata from CDDB. (default "%default")')
+parser.add_option('-s', '--stdout', action='store_const', dest='out', const=sys.stdout,
+	help='Write album file to standard output. Note that because of the'
+	' way tarfiles are constructed, nothing is written until after all data'
+	' from the disc is read into memory.')
+parser.add_option('-i', action='store_true', dest='interactive',
+	help='Interactive mode: Ask user to choose, if there are multiple categories.')
+
+parser.set_defaults(
+	disc='/dev/cdrom',
+	category=None,
+	out='{artist}-{title}.album',
+)
+
+opts, args = parser.parse_args()
+
+disc = CD(opts.disc)
+if opts.interactive and not opts.category and len(disc.categories) != 1:
+	items = disc.categories.items()
+	while True:
+		print 'Please choose a category:'
+		for i,info in enumerate(items):
+			print '[%i] %s: %s' % ((i,) + info)
+		print '[q] None (program will exit)'
+		choice = raw_input()
+		if choice == 'q':
+			exit(0)
+		else:
+			try:
+				opts.category = items[int(choice)][0]
+			except BaseException, e:
+				print e
+				continue
+			break
+if opts.category or len(disc.categories) == 1:
+	disc.set_category(opts.category or disc.categories[0])
+	print disc.metadata
+	disc.save(opts.out)
+else:
+	print >>sys.stderr, 'There are multiple discs with this signature.',
+	print >>sys.stderr, 'Please run again and specify a category with -c:'
+	for info in disc.categories.items():
+		print '    %s: %s' % info
+	exit(1)

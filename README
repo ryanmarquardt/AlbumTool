@@ -1,0 +1,5 @@
+AlbumTool includes a python library and several scripts for archiving audio cds. The library centers around creating 'album' files, which are tar archives containing lossless audio and cuesheet information. Two scripts expose the basic functions on the command line.
+
+'albumrip' creates an album file from an audio cd. The cuesheet is populated with information from CDDB.
+
+'albumsplit' splits the audio in an album file into tracks according to the cuesheet. It applies any metadata to the files, converts them using gstreamer to other formats, and has options for merging or splitting the tracks further.
